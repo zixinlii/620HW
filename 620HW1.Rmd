@@ -1,5 +1,5 @@
 ```{r}
-### Problem 1
+### Problem 1.d
 ### read data
 install.packages("lubridate")
 
@@ -110,7 +110,7 @@ daily_use <- ggplot(ST00_ps, aes(x = Date, y = daily_duration_per_use, color = i
 
 # Save the plots
 ggsave("HD1_2a_total.png", total)
-ggsave("HD1_2q_social.png", social)
+ggsave("HD1_2a_social.png", social)
 ggsave("HD1_2a_pickups.png", pickups)
 ggsave("HD1_2a_daily_social.png", daily_social)
 ggsave("HD1_2a_daily_use.png", daily_use)
@@ -129,53 +129,96 @@ ggsave("HD1_2b.png")
 ### Problem 2.c
 
 # Occupation time curve for Total.ST.min.true
-total_occupation_curve <- ggplot(ST00_ps, aes(x = Date, y = Total.ST.min.true)) +
-  geom_line(color = "blue") +
-  geom_point(color = "black") +
-  xlab("") + ylab("Total Screen Time (minutes)") +
+
+library(ggplot2)
+
+# Compute the probability of total screen time being greater than or equal to each threshold
+thresholds_2c1 <- c(100, 150, 200, 250, 300, 350, 400)
+probabilities_2c1 <- sapply(thresholds_2c1, function(c) {
+  sum(ST00_ps$Total.ST.min.true >= c) / nrow(ST00_ps)
+})
+
+# Create a dataframe containing the thresholds and their corresponding probabilities
+data_2c1 <- data.frame(threshold = thresholds_2c1, probability = probabilities_2c1)
+
+# Create a line plot
+ggplot(data_2c1, aes(x = threshold, y = probability)) +
+  geom_line(color = "steelblue") +
+  geom_point() +
+  xlab("Total Screen Time Threshold (min)") + ylab("Probability") +
   theme_minimal()
+
+ggsave("HD1_2c_total_occupation_curve.png")
 
 # Occupation time curve for Social.ST.min.true
-social_occupation_curve <- ggplot(ST00_ps, aes(x = Date, y = Social.ST.min.true)) +
-  geom_line(color = "blue") +
-  geom_point(color = "black") +
-  xlab("") + ylab("Social Screen Time (minutes)") +
+thresholds_2c2 <- c(100, 150, 200, 250, 300, 350,400)
+probabilities_2c2 <- sapply(thresholds_2c2, function(c) {
+  sum(ST00_ps$Social.ST.min.true >= c) / nrow(ST00_ps)
+})
+data_2c2 <- data.frame(threshold = thresholds_2c2, probability = probabilities_2c2)
+ggplot(data_2c2, aes(x = threshold, y = probability)) +
+  geom_line(color = "steelblue") +
+  geom_point() +
+  xlab("Social Screen Time Threshold (min)") + ylab("Probability") +
   theme_minimal()
+
+ggsave("HD1_2c_social_occupation_curve.png")
 
 # Occupation time curve for Pickups
-pickups_occupation_curve <- ggplot(ST00_ps, aes(x = Date, y = Pickup.1st)) +
-  geom_line(color = "blue") +
-  geom_point(color = "black") +
-  xlab("") + ylab("Number of Pickups") +
+thresholds_2c3 <- c(50, 60, 70, 80, 90, 100,110,120)
+probabilities_2c3 <- sapply(thresholds_2c3, function(c) {
+  sum(ST00_ps$Pickups >= c) / nrow(ST00_ps)
+})
+data_2c3 <- data.frame(threshold = thresholds_2c3, probability = probabilities_2c3)
+ggplot(data_2c3, aes(x = threshold, y = probability)) +
+  geom_line(color = "steelblue") +
+  geom_point() +
+  xlab("Total number of pickups") + ylab("Probability") +
   theme_minimal()
+
+ggsave("HD1_2c_pickups_occupation_curve.png")
 
 # Occupation time curve for social.ratio
-social_ratio_occupation_curve <- ggplot(ST00_ps, aes(x = Date, y = social.ratio)) +
-  geom_line(color = "blue") +
-  geom_point(color = "black") +
-  xlab("") + ylab("Social Ratio") +
+thresholds_2c4 <- c(0.4,0.5,0.6,0.7,0.8,0.9)
+probabilities_2c4 <- sapply(thresholds_2c4, function(c) {
+  sum(ST00_ps$social.ratio >= c) / nrow(ST00_ps)
+})
+data_2c4 <- data.frame(threshold = thresholds_2c4, probability = probabilities_2c4)
+ggplot(data_2c4, aes(x = threshold, y = probability)) +
+  geom_line(color = "steelblue") +
+  geom_point() +
+  xlab("Daily Proportion of Social Time") + ylab("Probability") +
   theme_minimal()
+
+ggsave("HD1_2c_social_ratio_occupation_curve.png")
 
 # Occupation time curve for daily_duration_per_use
-daily_duration_occupation_curve <- ggplot(ST00_ps, aes(x = Date, y = daily_duration_per_use)) +
-  geom_line(color = "blue") +
-  geom_point(color = "black") +
-  xlab("") + ylab("Daily Duration per Use") +
+thresholds_2c5 <- c(1,2,3,4,5,6)
+probabilities_2c5 <- sapply(thresholds_2c5, function(c) {
+  sum(ST00_ps$daily_duration_per_use >= c) / nrow(ST00_ps)
+})
+data_2c5 <- data.frame(threshold = thresholds_2c5, probability = probabilities_2c5)
+ggplot(data_2c5, aes(x = threshold, y = probability)) +
+  geom_line(color = "steelblue") +
+  geom_point() +
+  xlab("Daily Duration Per Use (min)") + ylab("Probability") +
   theme_minimal()
 
-# Show the plots
-ggsave("HD1_2c_total_occupation_curve.png", total_occupation_curve)
-ggsave("HD1_2c_social_occupation_curve.png", social_occupation_curve)
-ggsave("HD1_2c_pickups_occupation_curve.png", pickups_occupation_curve)
-ggsave("HD1_2c_social_ratio_occupation_curve.png", social_ratio_occupation_curve)
-ggsave("HD1_2c_daily_duration_occupation_curve.png", daily_duration_occupation_curve)
+ggsave("HD1_2c_daily_duration_occupation_curve.png")
 
 ### Problem 2.d
 
-# Use acf function to compute autocorrelations
+# Creat Plots
+total_acf <- acf(ST00_ps$Total.ST.min.true)
+social_acf <- acf(ST00_ps$Social.ST.min.true)
+pickups_acf <- acf(ST00_ps$Pickups)
+social_ratio_acf <- acf(ST00_ps$social.ratio)
+daily_duration_acf <- acf(ST00_ps$daily_duration_per_use)
+
+# Use acf functions to compute autocorrelations
 total_acf <- acf(ST00_ps$Total.ST.min.true, plot = FALSE)
 social_acf <- acf(ST00_ps$Social.ST.min.true, plot = FALSE)
-pickups_acf <- acf(ST00_ps$Pickup.1st, plot = FALSE)
+pickups_acf <- acf(ST00_ps$Pickups, plot = FALSE)
 social_ratio_acf <- acf(ST00_ps$social.ratio, plot = FALSE)
 daily_duration_acf <- acf(ST00_ps$daily_duration_per_use, plot = FALSE)
 
@@ -196,7 +239,7 @@ print(daily_duration_acf$acf)
 ST00_ps <- ST00_ps %>%
   mutate(Pickup.1st.angular = (hour(Pickup.1st) * 60 + minute(Pickup.1st)) / (24 * 60) * 360)
 
-head(ST00_ps)
+print(ST00_ps)
 
 ### Problem 3b
 
