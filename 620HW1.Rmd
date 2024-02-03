@@ -1,0 +1,278 @@
+```{r}
+### Problem 1
+### read data
+install.packages("lubridate")
+
+library(readxl)
+library(lubridate)
+library(dplyr)
+
+setwd("/Users/lichengru/Desktop")
+
+# Read data from Excel file
+ST00_ps = read_excel(path = "ScreenTime.xlsx",
+                     col_types = c("date","text","numeric","text","numeric","numeric","date"))
+
+# Convert Pickup.1st column to POSIXct format
+ST00_ps <- ST00_ps %>%
+  mutate(Pickup.1st = as.POSIXct(paste(Date, unlist(lapply(ST00_ps$Pickup.1st, function(x) { strsplit(as.character(x), split = " ")[[1]][2] })))))
+
+# Define function to convert hours and minutes to minutes
+hm_to_min <- function(hm) {
+  unlist(lapply(hm, function(x) {
+    split <- strsplit(x, "h")[[1]]
+    hr <- as.numeric(split[1])
+    mn <- as.numeric(strsplit(split[2], "m")[[1]][1])
+    return(60 * hr + mn)
+  }))
+}
+
+# Apply hm_to_min function to Total.ST and Social.ST columns to get Total.ST.min.true and Social.ST.min.true
+ST00_ps <- ST00_ps %>%
+  mutate(
+    Total.ST.min.true = hm_to_min(Total.ST),
+    Social.ST.min.true = hm_to_min(Social.ST),
+    Total.ST.match = Total.ST.min.true == Total.ST.min,
+    Social.ST.match = Social.ST.min.true == Social.ST.min
+  ) %>%
+  relocate(Date, Total.ST, Total.ST.min, Total.ST.min.true, Total.ST.match,
+           Social.ST, Social.ST.min, Social.ST.min.true, Social.ST.match)
+
+# Calculate daily proportion of social screen time
+ST00_ps <- ST00_ps %>%
+  mutate(social.ratio = Social.ST.min.true / Total.ST.min.true)
+
+# Calculate daily duration per use
+ST00_ps <- ST00_ps %>%
+  mutate(daily_duration_per_use = Total.ST.min.true / Pickups)
+
+# View the updated dataset
+print(ST00_ps)
+
+
+### Problem 2.a
+library(ggplot2)
+library(dplyr)
+
+# Add a column to store the weekday of each date
+ST00_ps$weekday <- weekdays(ST00_ps$Date, abbreviate = TRUE)
+
+# Use ifelse function to determine if it's a weekend and store the result in a new column if_weekend
+ST00_ps <- ST00_ps %>%
+  mutate(if_weekend = ifelse(weekday %in% c("Sun", "Sat"), TRUE, FALSE))
+
+# Create plot for total screen time
+total <- ggplot(ST00_ps, aes(x = Date, y = Total.ST.min.true, color = if_weekend)) +
+  geom_line(color = "steelblue") +
+  geom_point() +
+  xlab("") + ylab("Total Screen Time (min)") +
+  ylim(100, 400) +
+  scale_color_manual(labels = c("weekdays", "weekends"), values = c("black", "red")) +
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 60, hjust = 1), legend.title = element_blank())
+
+# Create plot for social screen time
+social <- ggplot(ST00_ps, aes(x = Date, y = Social.ST.min.true, color = if_weekend)) +
+  geom_line(color = "steelblue") +
+  geom_point() +
+  xlab("") + ylab("Social Screen Time (min)") +
+  ylim(100, 400) +
+  scale_color_manual(labels = c("weekdays", "weekends"), values = c("black", "red")) +
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 60, hjust = 1), legend.title = element_blank())
+
+# Create plot for total number of pickups
+pickups <- ggplot(ST00_ps, aes(x = Date, y = Pickups, color = if_weekend)) +
+  geom_line(color = "steelblue") +
+  geom_point() +
+  xlab("") + ylab("Total number of pickups") +
+  theme_minimal() +
+  scale_color_manual(labels = c("weekdays", "weekends"), values = c("black", "red")) +
+  theme(axis.text.x = element_text(angle = 60, hjust = 1), legend.title = element_blank())
+
+# Create plot for daily proportion of social screen time
+daily_social <- ggplot(ST00_ps, aes(x = Date, y = social.ratio, color = if_weekend)) +
+  geom_line(color = "steelblue") +
+  geom_point() +
+  xlab("") + ylab("Daily proportion of social time") +
+  theme_minimal() +
+  scale_color_manual(labels = c("weekdays", "weekends"), values = c("black", "red")) +
+  theme(axis.text.x = element_text(angle = 60, hjust = 1), legend.title = element_blank())
+
+# Create plot for daily duration per use
+daily_use <- ggplot(ST00_ps, aes(x = Date, y = daily_duration_per_use, color = if_weekend)) +
+  geom_line(color = "steelblue") +
+  geom_point() +
+  xlab("") + ylab("Daily duration per use") +
+  theme_minimal() +
+  scale_color_manual(labels = c("weekdays", "weekends"), values = c("black", "red")) +
+  theme(axis.text.x = element_text(angle = 60, hjust = 1), legend.title = element_blank())
+
+# Save the plots
+ggsave("HD1_2a_total.png", total)
+ggsave("HD1_2q_social.png", social)
+ggsave("HD1_2a_pickups.png", pickups)
+ggsave("HD1_2a_daily_social.png", daily_social)
+ggsave("HD1_2a_daily_use.png", daily_use)
+
+
+### Problem 2.b
+
+library("GGally")
+
+ggpairs(ST00_ps, columns = c("Total.ST.min.true", "Social.ST.min.true", "Pickups","social.ratio","daily_duration_per_use"),
+        columnLabels = c("total screen time", "social screen time", "total pickups","daily proportion of social screen time","daily duration per use")) +
+  theme_bw()
+
+ggsave("HD1_2b.png")
+
+### Problem 2.c
+
+# Occupation time curve for Total.ST.min.true
+total_occupation_curve <- ggplot(ST00_ps, aes(x = Date, y = Total.ST.min.true)) +
+  geom_line(color = "blue") +
+  geom_point(color = "black") +
+  xlab("") + ylab("Total Screen Time (minutes)") +
+  theme_minimal()
+
+# Occupation time curve for Social.ST.min.true
+social_occupation_curve <- ggplot(ST00_ps, aes(x = Date, y = Social.ST.min.true)) +
+  geom_line(color = "blue") +
+  geom_point(color = "black") +
+  xlab("") + ylab("Social Screen Time (minutes)") +
+  theme_minimal()
+
+# Occupation time curve for Pickups
+pickups_occupation_curve <- ggplot(ST00_ps, aes(x = Date, y = Pickup.1st)) +
+  geom_line(color = "blue") +
+  geom_point(color = "black") +
+  xlab("") + ylab("Number of Pickups") +
+  theme_minimal()
+
+# Occupation time curve for social.ratio
+social_ratio_occupation_curve <- ggplot(ST00_ps, aes(x = Date, y = social.ratio)) +
+  geom_line(color = "blue") +
+  geom_point(color = "black") +
+  xlab("") + ylab("Social Ratio") +
+  theme_minimal()
+
+# Occupation time curve for daily_duration_per_use
+daily_duration_occupation_curve <- ggplot(ST00_ps, aes(x = Date, y = daily_duration_per_use)) +
+  geom_line(color = "blue") +
+  geom_point(color = "black") +
+  xlab("") + ylab("Daily Duration per Use") +
+  theme_minimal()
+
+# Show the plots
+ggsave("HD1_2c_total_occupation_curve.png", total_occupation_curve)
+ggsave("HD1_2c_social_occupation_curve.png", social_occupation_curve)
+ggsave("HD1_2c_pickups_occupation_curve.png", pickups_occupation_curve)
+ggsave("HD1_2c_social_ratio_occupation_curve.png", social_ratio_occupation_curve)
+ggsave("HD1_2c_daily_duration_occupation_curve.png", daily_duration_occupation_curve)
+
+### Problem 2.d
+
+# Use acf function to compute autocorrelations
+total_acf <- acf(ST00_ps$Total.ST.min.true, plot = FALSE)
+social_acf <- acf(ST00_ps$Social.ST.min.true, plot = FALSE)
+pickups_acf <- acf(ST00_ps$Pickup.1st, plot = FALSE)
+social_ratio_acf <- acf(ST00_ps$social.ratio, plot = FALSE)
+daily_duration_acf <- acf(ST00_ps$daily_duration_per_use, plot = FALSE)
+
+# Print the autocorrelation values
+print("Autocorrelation values for Total Screen Time:")
+print(total_acf$acf)
+print("Autocorrelation values for Social Screen Time:")
+print(social_acf$acf)
+print("Autocorrelation values for Pickups:")
+print(pickups_acf$acf)
+print("Autocorrelation values for Social Ratio:")
+print(social_ratio_acf$acf)
+print("Autocorrelation values for Daily Duration per Use:")
+print(daily_duration_acf$acf)
+
+### Problem 3a
+
+ST00_ps <- ST00_ps %>%
+  mutate(Pickup.1st.angular = (hour(Pickup.1st) * 60 + minute(Pickup.1st)) / (24 * 60) * 360)
+
+head(ST00_ps)
+
+### Problem 3b
+
+library(circular)
+
+# Create circular object
+first.pickup.cir <- circular(ST00_ps$Pickup.1st.angular, units = "degrees", template = "clock24")
+
+# Save the circular plot
+png("HD1_3b.png")
+plot(first.pickup.cir, col = "blue")
+dev.off()
+
+### Problem 3c
+
+# Save the stacked circular plot
+png("HD1_3c.png")
+plot(first.pickup.cir, stack = TRUE, bins = 48, col = "blue")
+dev.off()
+
+### Problem 4b
+
+# Load the necessary libraries
+library(dplyr)
+
+ST00_ps$Total.ST.h.true <- ST00_ps$Total.ST.min.true / 60
+head(ST00_ps$Total.ST.h.true)
+
+# Fit Poisson regression model with offset
+model4b <- glm(Pickups ~ 1, family = poisson, data = ST00_ps, offset = log(Total.ST.h.true))
+
+# Print summary of the model
+summary(model4b)
+
+# Extract coefficient of intercept and exponentiate to get the estimate of lambda
+lambda_estimate <- exp(coef(model4b)[1])
+
+# Print the estimate of lambda
+print(lambda_estimate)
+
+### Problem 4c
+# Define dummy variables Xt and Zt
+ST00_ps$Xt <- ifelse(weekdays(ST00_ps$Date) %in% c("Monday", "Tuesday", "Wednesday", "Thursday", "Friday"), 1, 0)
+ST00_ps$Zt <- ifelse(as.Date(ST00_ps$Date) >= as.Date("2024-01-10"), 1, 0)
+
+# Fit log-linear model
+model4c <- glm(log(Pickups) ~ Xt + Zt, family = poisson, data = ST00_ps)
+
+# Print summary of the model
+summary(model4c)
+
+### Problem 5a
+
+# Load the necessary library
+library(circular)
+
+# Use mle.vonmises function to estimate parameters
+fit <- mle.vonmises(first.pickup.cir)
+
+# Extract estimated parameters
+mu_hat <- fit$mu
+lambda_hat <- fit$kappa
+
+# Print the estimated parameters
+print(paste("Estimated mean direction (μ):", mu_hat))
+print(paste("Estimated concentration parameter (λ):", lambda_hat))
+
+### Problem 5b
+
+# Convert 8:30 AM to its corresponding angular position
+time_830 <- (8 * 60 + 30) / (24 * 60) * 360
+
+# Use pvonmises function to calculate the probability
+prob_830_or_later <- (1-pvonmises(time_830, mu = mu_hat, kappa = lambda_hat))
+
+# Print the probability
+print(paste("Probability of first pickup being 8:30 AM or later:", prob_830_or_later))
+
+```
